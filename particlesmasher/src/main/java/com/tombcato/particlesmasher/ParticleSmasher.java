@@ -9,7 +9,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
+import androidx.lifecycle.LifecycleOwner;
+
 import java.util.List;
+import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -17,60 +23,208 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *     author : FaDai
  *     e-mail : i_fadai@163.com
  *     time   : 2017/12/14
- *     desc   : xxxx描述
- *     version: 1.0
+ *     desc   : 粒子粉碎动画容器
+ *     version: 2.0
  * </pre>
  */
 
 public class ParticleSmasher extends View {
 
-    // 使用 CopyOnWriteArrayList 避免遍历时的并发修改问题
+    // ==================== 单例缓存 ====================
+    
+    /** Activity 级别缓存（同 Activity 的所有 Fragment 共用） */
+    private static final WeakHashMap<Activity, ParticleSmasher> sActivityCache = new WeakHashMap<>();
+    
+    /** ViewGroup 级别缓存（每个容器独立） */
+    private static final WeakHashMap<ViewGroup, ParticleSmasher> sViewGroupCache = new WeakHashMap<>();
+
+    // ==================== 实例成员 ====================
+    
     private List<SmashAnimator> mAnimators = new CopyOnWriteArrayList<>();
     private Canvas mCanvas;
-    private Activity mActivity;
+    private LifecycleEventObserver mLifecycleObserver;
 
-    public ParticleSmasher(Activity activity) {
-        super((Context) activity);
-        this.mActivity = activity;
-        addView2Window(activity);
-        init();
+    // ==================== 静态工厂方法 ====================
+    
+    /**
+     * 获取或创建 Activity 级别的 ParticleSmasher
+     * 同一 Activity 内的所有 Fragment 共用同一个实例
+     * 
+     * @param activity 目标 Activity
+     * @return ParticleSmasher 实例
+     */
+    public static synchronized ParticleSmasher get(Activity activity) {
+        ParticleSmasher instance = sActivityCache.get(activity);
+        if (instance == null || !instance.isAttachedToWindow()) {
+            instance = new ParticleSmasher(activity);
+            sActivityCache.put(activity, instance);
+        }
+        return instance;
+    }
+    
+    /**
+     * 获取或创建 Fragment 级别的 ParticleSmasher
+     * 粒子动画限制在 Fragment 根视图内
+     * 
+     * @param fragment 目标 Fragment
+     * @return ParticleSmasher 实例
+     */
+    public static synchronized ParticleSmasher get(Fragment fragment) {
+        View rootView = fragment.getView();
+        if (rootView instanceof ViewGroup) {
+            return get((ViewGroup) rootView);
+        }
+        // Fragment 根视图不是 ViewGroup，回退到 Activity 级别
+        return get(fragment.requireActivity());
+    }
+    
+    /**
+     * 获取或创建 ViewGroup 级别的 ParticleSmasher
+     * 粒子动画限制在指定容器内
+     * 
+     * @param container 目标容器
+     * @return ParticleSmasher 实例
+     */
+    public static synchronized ParticleSmasher get(ViewGroup container) {
+        ParticleSmasher instance = sViewGroupCache.get(container);
+        if (instance == null || !instance.isAttachedToWindow()) {
+            instance = new ParticleSmasher(container);
+            sViewGroupCache.put(container, instance);
+        }
+        return instance;
     }
 
+    // ==================== 构造函数 ====================
+    
     /**
-     * 添加View到当前界面
+     * Activity 级别构造函数
+     * @param activity 目标 Activity
      */
-    private void addView2Window(Activity activity) {
+    public ParticleSmasher(Activity activity) {
+        super((Context) activity);
+        addViewToWindow(activity);
+        init();
+        observeLifecycle(activity);
+    }
+    
+    /**
+     * ViewGroup 级别构造函数
+     * @param container 目标容器
+     */
+    public ParticleSmasher(ViewGroup container) {
+        super(container.getContext());
+        addViewToContainer(container);
+        init();
+        observeLifecycle(container.getContext());
+    }
+
+    // ==================== 初始化方法 ====================
+    
+    private void addViewToWindow(Activity activity) {
         ViewGroup rootView = (ViewGroup) activity.findViewById(Window.ID_ANDROID_CONTENT);
-        // 需要足够的空间展现动画，因此这里使用的是充满父布局
-        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        rootView.addView(this, layoutParams);
+        ViewGroup.LayoutParams lp = new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 
+            ViewGroup.LayoutParams.MATCH_PARENT
+        );
+        rootView.addView(this, lp);
+    }
+    
+    private void addViewToContainer(ViewGroup container) {
+        ViewGroup.LayoutParams lp = new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 
+            ViewGroup.LayoutParams.MATCH_PARENT
+        );
+        container.addView(this, lp);
     }
 
     private void init() {
         mCanvas = new Canvas();
+        setLayerType(LAYER_TYPE_HARDWARE, null);
     }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        for (SmashAnimator animator : mAnimators) {
-            animator.draw(canvas);
+    
+    /**
+     * 监听生命周期，自动清理资源
+     */
+    private void observeLifecycle(Context context) {
+        if (context instanceof LifecycleOwner) {
+            LifecycleOwner owner = (LifecycleOwner) context;
+            mLifecycleObserver = (source, event) -> {
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    detach();
+                }
+            };
+            owner.getLifecycle().addObserver(mLifecycleObserver);
         }
     }
 
+    // ==================== 生命周期管理 ====================
+    
+    /**
+     * 从父容器移除并清理资源
+     */
+    public synchronized void detach() {
+        clear();
+        ViewGroup parent = (ViewGroup) getParent();
+        if (parent != null) {
+            parent.removeView(this);
+        }
+        // 从缓存移除
+        sActivityCache.values().remove(this);
+        sViewGroupCache.values().remove(this);
+        // 移除生命周期观察者
+        if (mLifecycleObserver != null && getContext() instanceof LifecycleOwner) {
+            ((LifecycleOwner) getContext()).getLifecycle().removeObserver(mLifecycleObserver);
+            mLifecycleObserver = null;
+        }
+    }
+    
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        clear();
+    }
+
+    // ==================== 绘制逻辑 ====================
+    
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        
+        Rect combinedDirtyRect = new Rect();
+        boolean hasActiveAnimator = false;
+        
+        for (SmashAnimator animator : mAnimators) {
+            animator.draw(canvas);
+            Rect dirtyRect = animator.getDirtyRect();
+            if (!dirtyRect.isEmpty()) {
+                combinedDirtyRect.union(dirtyRect);
+                hasActiveAnimator = true;
+            }
+        }
+        
+        if (hasActiveAnimator) {
+            int viewWidth = getWidth();
+            int viewHeight = getHeight();
+            int dirtyArea = combinedDirtyRect.width() * combinedDirtyRect.height();
+            int viewArea = viewWidth * viewHeight;
+            
+            if (viewArea > 0 && dirtyArea > viewArea * 0.8f) {
+                invalidate();
+            } else {
+                invalidate(combinedDirtyRect);
+            }
+        }
+    }
+
+    // ==================== 动画 API ====================
+    
     public SmashAnimator with(View view) {
-        // 先停止该 View 上正在进行的动画
         stopAnimation(view);
-        // 每次都新建一个单独的SmashAnimator对象
         SmashAnimator animator = new SmashAnimator(this, view);
         mAnimators.add(animator);
         return animator;
     }
 
-    /**
-     * 停止指定 View 的粒子动画
-     * @param view 目标 View
-     */
     public void stopAnimation(View view) {
         for (SmashAnimator animator : mAnimators) {
             if (animator.getAnimatorView() == view) {
@@ -80,11 +234,6 @@ public class ParticleSmasher extends View {
         }
     }
 
-    /**
-     * 检查指定View是否正在执行动画
-     * @param view 要检查的View
-     * @return 是否正在动画中
-     */
     public boolean isAnimating(View view) {
         for (SmashAnimator animator : mAnimators) {
             if (animator.getAnimatorView() == view) {
@@ -93,13 +242,21 @@ public class ParticleSmasher extends View {
         }
         return false;
     }
+    
+    public void removeAnimator(SmashAnimator animator) {
+        mAnimators.remove(animator);
+    }
 
+    public void clear() {
+        for (SmashAnimator animator : mAnimators) {
+            animator.stop();
+        }
+        mAnimators.clear();
+        invalidate();
+    }
 
-    /**
-     * 获取View的Rect，并去掉状态栏、toolbar高度
-     * @param view    来源View
-     * @return        获取到的Rect
-     */
+    // ==================== 工具方法 ====================
+    
     public Rect getViewRect(View view) {
         Rect rect = new Rect();
         view.getGlobalVisibleRect(rect);
@@ -111,21 +268,10 @@ public class ParticleSmasher extends View {
         return rect;
     }
 
-    /**
-     * 获取View的Bitmap
-     * @param view     来源View
-     * @return         获取到的图片
-     */
     public Bitmap createBitmapFromView(View view) {
         return createBitmapFromView(view, new Rect(0, 0, view.getWidth(), view.getHeight()));
     }
 
-    /**
-     * 获取View指定区域的Bitmap
-     * @param view      来源View
-     * @param cropRect  裁剪区域（相对于View左上角）
-     * @return          获取到的图片
-     */
     public Bitmap createBitmapFromView(View view, Rect cropRect) {
         view.clearFocus();
         if (cropRect == null || cropRect.isEmpty() || view.getWidth() <= 0 || view.getHeight() <= 0) {
@@ -144,32 +290,8 @@ public class ParticleSmasher extends View {
         return bitmap;
     }
 
-    /**
-     * 移除动画
-     * @param animator  需要移除的动画
-     */
-    public void removeAnimator(SmashAnimator animator) {
-        if (mAnimators.contains(animator)) {
-            mAnimators.remove(animator);
-        }
-    }
-
-    /**
-     *   清除所有动画
-     */
-    public void clear() {
-        mAnimators.clear();
-        invalidate();
-    }
-
-    /**
-     * 让View重新显示
-     * @param view      已经隐藏的View
-     */
     public void reShowView(View view) {
-        // 取消所有pending动画
         view.animate().cancel();
-        // 直接设置属性，确保立即生效（不用异步动画）
         view.setScaleX(1f);
         view.setScaleY(1f);
         view.setAlpha(1f);
@@ -177,6 +299,4 @@ public class ParticleSmasher extends View {
         view.setTranslationY(0f);
         view.setVisibility(View.VISIBLE);
     }
-
-
 }

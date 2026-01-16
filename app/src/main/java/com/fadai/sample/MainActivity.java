@@ -7,6 +7,7 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -79,12 +80,17 @@ public class MainActivity extends AppCompatActivity {
             "线性 (Linear)",
             "先加后减 (AccelerateDecelerate)"
     };
-    private static final Interpolator[] INTERPOLATOR_VALUES = {
-            new AccelerateInterpolator(0.6f),
-            new DecelerateInterpolator(),
-            new LinearInterpolator(),
-            new AccelerateDecelerateInterpolator()
-    };
+    
+    // 优化：按需创建 Interpolator，避免静态初始化问题
+    private static Interpolator getInterpolator(int index) {
+        switch (index) {
+            case 0: return new AccelerateInterpolator(0.6f);
+            case 1: return new DecelerateInterpolator();
+            case 2: return new LinearInterpolator();
+            case 3: return new AccelerateDecelerateInterpolator();
+            default: return new AccelerateInterpolator(0.6f);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -238,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
 
         int style = STYLE_VALUES[styleIndex];
         int shape = SHAPE_VALUES[shapeIndex];
-        Interpolator interpolator = INTERPOLATOR_VALUES[interpolatorIndex];
+        Interpolator interpolator = getInterpolator(interpolatorIndex);
         int scaleMode = SCALE_MODE_VALUES[scaleModeIndex];
         long duration = mSeekDuration.getProgress();
         long startDelay = mSeekStartDelay.getProgress();
@@ -251,7 +257,21 @@ public class MainActivity extends AppCompatActivity {
         float endRandomness = mSeekEndRandomness.getProgress() / 100f;
         boolean hideAnim = mSwitchHideAnim.isChecked();
 
-        mSmasher.with(mIvTest)
+        // 优化：抽取公共方法消除重复代码
+        animateView(mIvTest, style, shape, interpolator, scaleMode, duration, startDelay,
+                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim);
+        animateView(mIvCover, style, shape, interpolator, scaleMode, duration, startDelay,
+                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim);
+    }
+    
+    /**
+     * 执行粒子动画
+     */
+    private void animateView(View target, int style, int shape, Interpolator interpolator,
+                             int scaleMode, long duration, long startDelay,
+                             float horizontal, float vertical, int radius, int gapPx,
+                             float startRandomness, float endRandomness, boolean hideAnim) {
+        mSmasher.with(target)
                 .setStyle(style)
                 .setShape(shape)
                 .setInterpolator(interpolator)
@@ -268,29 +288,7 @@ public class MainActivity extends AppCompatActivity {
                 .addAnimatorListener(new SmashAnimator.OnAnimatorListener() {
                     @Override
                     public void onAnimatorEnd() {
-                        mSmasher.reShowView(mIvTest);
-                    }
-                })
-                .start();
-
-        mSmasher.with(mIvCover)
-                .setStyle(style)
-                .setShape(shape)
-                .setInterpolator(interpolator)
-                .setDuration(duration)
-                .setStartDelay(startDelay)
-                .setHorizontalMultiple(horizontal)
-                .setVerticalMultiple(vertical)
-                .setStartRandomness(startRandomness)
-                .setEndRandomness(endRandomness)
-                .setParticleRadius(radius)
-                .setParticleGap(gapPx)
-                .setScaleMode(scaleMode)
-                .setHideAnimation(hideAnim)
-                .addAnimatorListener(new SmashAnimator.OnAnimatorListener() {
-                    @Override
-                    public void onAnimatorEnd() {
-                        mSmasher.reShowView(mIvCover);
+                        mSmasher.reShowView(target);
                     }
                 })
                 .start();

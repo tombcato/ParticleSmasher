@@ -1,21 +1,19 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ParticleSmasher library ProGuard rules
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep all public classes and members
+-keep class com.tombcato.particlesmasher.ParticleSmasher { *; }
+-keep class com.tombcato.particlesmasher.SmashAnimator { *; }
+-keep class com.tombcato.particlesmasher.SmashAnimator$* { *; }
+-keep class com.tombcato.particlesmasher.Utils { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep Particle class hierarchy
+-keep class com.tombcato.particlesmasher.particle.Particle { *; }
+-keep class com.tombcato.particlesmasher.particle.Particle$* { *; }
+-keep class * extends com.tombcato.particlesmasher.particle.Particle { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep enum classes
+-keepclassmembers enum com.tombcato.particlesmasher.** {
+    <fields>;
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

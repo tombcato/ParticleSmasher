@@ -20,6 +20,7 @@ import com.tombcato.particlesmasher.particle.Particle;
 import com.tombcato.particlesmasher.particle.RiseParticle;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <pre>
@@ -64,7 +65,9 @@ public class SmashAnimator {
     private Rect mRect;                                // 要进行动画的View在坐标系中的矩形
     
     private Paint mPaint;                              // 绘制粒子的画笔
-    private Particle[][] mParticles;                   // 粒子数组
+    private Particle[] mParticles;                     // 粒子数组（一维）
+    private int mParticleCount;                        // 粒子数量
+    private final Rect mDirtyRect = new Rect();        // 当前帧的脏区
     
     private float mEndValue = 1.5f;
 
@@ -78,10 +81,10 @@ public class SmashAnimator {
     private Interpolator mInterpolator = new AccelerateInterpolator(0.6f);  // 插值器
 
     // 随机延迟系数
-    private float mStartRandomness = 0.1f;  // 默认 font = 0.1 * random
-    private float mEndRandomness = 0.4f;    // 默认 later = 0.4 * random
+    private float mStartRandomness = 0.1f;  // 默认 startOffset = 0.1 * random
+    private float mEndRandomness = 0.4f;    // 默认 endFadeOffset = 0.4 * random
 
-    private int mScaleMode = SCALE_DOWN;    // 缩放模式
+    private Particle.ScaleMode mScaleMode = Particle.ScaleMode.SCALE_DOWN;    // 缩放模式
 
     private OnAnimatorListener mOnAnimatorLIstener;
 
@@ -264,7 +267,22 @@ public class SmashAnimator {
      * @return 链式调用
      */
     public SmashAnimator setScaleMode(int scaleMode) {
-        this.mScaleMode = scaleMode;
+        // 将 int 常量转换为枚举，保持 API 兼容
+        switch (scaleMode) {
+            case SCALE_UP:
+                this.mScaleMode = Particle.ScaleMode.SCALE_UP;
+                break;
+            case SCALE_SAME:
+                this.mScaleMode = Particle.ScaleMode.SCALE_SAME;
+                break;
+            case SCALE_DOWN:
+                this.mScaleMode = Particle.ScaleMode.SCALE_DOWN;
+                break;
+            default:
+                // 稳定性：非法值记录警告
+                android.util.Log.w("ParticleSmasher", "Invalid scaleMode: " + scaleMode + ", using SCALE_DOWN");
+                this.mScaleMode = Particle.ScaleMode.SCALE_DOWN;
+        }
         return this;
     }
 
@@ -312,6 +330,12 @@ public class SmashAnimator {
      *   开始动画
      */
     public void start() {
+        // 稳定性：View 未完成布局时延迟执行
+        if (mAnimatorView.getWidth() <= 0 || mAnimatorView.getHeight() <= 0) {
+            mAnimatorView.post(this::start);
+            return;
+        }
+        
         // 防止动画正在运行时重复启动
         if (mValueAnimator.isRunning()) {
             return;
@@ -406,8 +430,13 @@ public class SmashAnimator {
         int col = bitmap.getWidth() / step;
         int row = bitmap.getHeight() / step;
 
-        Random random = new Random(System.currentTimeMillis());
-        mParticles = new Particle[row][col];
+        // 使用 ThreadLocalRandom 代替每次 new Random，性能更好
+        Random random = ThreadLocalRandom.current();
+        
+        // 一维数组：减少内存碎片，提升 cache 命中率
+        mParticleCount = row * col;
+        mParticles = new Particle[mParticleCount];
+        int index = 0;
 
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
@@ -421,37 +450,37 @@ public class SmashAnimator {
 
                 switch (mStyle){
                     case STYLE_EXPLOSION:
-                        mParticles[i][j] = new ExplosionParticle(color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new ExplosionParticle(color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_DROP:
-                        mParticles[i][j] = new DropParticle(point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new DropParticle(point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_FLOAT_LEFT:
-                        mParticles[i][j] = new FloatParticle(FloatParticle.ORIENTATION_LEFT,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new FloatParticle(FloatParticle.ORIENTATION_LEFT,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_FLOAT_RIGHT:
-                        mParticles[i][j] = new FloatParticle(FloatParticle.ORIENTATION_RIGHT,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new FloatParticle(FloatParticle.ORIENTATION_RIGHT,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_FLOAT_TOP:
-                        mParticles[i][j] = new FloatParticle(FloatParticle.ORIENTATION_TOP,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new FloatParticle(FloatParticle.ORIENTATION_TOP,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_FLOAT_BOTTOM:
-                        mParticles[i][j] = new FloatParticle(FloatParticle.ORIENTATION_BOTTOM,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new FloatParticle(FloatParticle.ORIENTATION_BOTTOM,point,color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_RISE:
-                        mParticles[i][j] = new RiseParticle(RiseParticle.DIRECTION_ALL, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new RiseParticle(RiseParticle.DIRECTION_ALL, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_RISE_LEFT:
-                        mParticles[i][j] = new RiseParticle(RiseParticle.DIRECTION_LEFT, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new RiseParticle(RiseParticle.DIRECTION_LEFT, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_RISE_RIGHT:
-                        mParticles[i][j] = new RiseParticle(RiseParticle.DIRECTION_RIGHT, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new RiseParticle(RiseParticle.DIRECTION_RIGHT, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                     case STYLE_RISE_TOP:
-                        mParticles[i][j] = new RiseParticle(RiseParticle.DIRECTION_TOP, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
+                        mParticles[index] = new RiseParticle(RiseParticle.DIRECTION_TOP, point, color, mRadius, mRect, mEndValue, random, mHorizontalMultiple, mVerticalMultiple, mStartRandomness, mEndRandomness, mScaleMode);
                         break;
                 }
-
+                index++;
             }
         }
         mBitmap.recycle();
@@ -478,13 +507,11 @@ public class SmashAnimator {
             // 启用抖动+缩放动画
             ValueAnimator valueAnimator = new ValueAnimator();
             valueAnimator.setDuration(startDelay + 50).setFloatValues(0f, 1f);
-            // 使View颤抖
+            // 使View颤抖 - 使用 ThreadLocalRandom 代替每次创建 Random
             valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-
-                Random random = new Random();
-
                 @Override
                 public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                    Random random = ThreadLocalRandom.current();
                     view.setTranslationX((random.nextFloat() - 0.5F) * view.getWidth() * 0.05F);
                     view.setTranslationY((random.nextFloat() - 0.5f) * view.getHeight() * 0.05f);
                 }
@@ -513,7 +540,8 @@ public class SmashAnimator {
      *   @return 是否成功
      */
     public boolean draw(Canvas canvas) {
-        if (!mValueAnimator.isStarted()) {
+        // 稳定性：空指针防护
+        if (!mValueAnimator.isStarted() || mParticles == null || mParticleCount <= 0) {
             return false;
         }
 
@@ -524,47 +552,57 @@ public class SmashAnimator {
         float maxY = -Float.MAX_VALUE;
         boolean hasVisibleParticle = false;
 
-        for (Particle[] particle : mParticles) {
-            for (Particle p : particle) {
-                // 根据动画进程，修改粒子的参数
-                p.advance((float) (mValueAnimator.getAnimatedValue()), mEndValue);
-                if (p.alpha > 0) {
-                    mPaint.setColor(p.color);
-                    // 优化：使用预计算的 baseAlpha，避免每次调用 Color.alpha()
-                    mPaint.setAlpha((int) (p.baseAlpha * p.alpha));
-                    
-                    if (mShape == SHAPE_SQUARE) {
-                        // 方形：以 (cx, cy) 为中心，radius 为半边长
-                        canvas.drawRect(
-                            p.cx - p.radius, 
-                            p.cy - p.radius, 
-                            p.cx + p.radius, 
-                            p.cy + p.radius, 
-                            mPaint
-                        );
-                    } else {
-                        // 圆形（默认）
-                        canvas.drawCircle(p.cx, p.cy, p.radius, mPaint);
-                    }
+        // 优化：缓存 animatedValue，避免每个粒子都调用一次
+        float animatedValue = (float) mValueAnimator.getAnimatedValue();
 
-                    // 更新脏区
-                    hasVisibleParticle = true;
-                    if (p.cx - p.radius < minX) minX = p.cx - p.radius;
-                    if (p.cx + p.radius > maxX) maxX = p.cx + p.radius;
-                    if (p.cy - p.radius < minY) minY = p.cy - p.radius;
-                    if (p.cy + p.radius > maxY) maxY = p.cy + p.radius;
+        // 优化：一维数组遍历，减少循环开销和提升 cache 命中率
+        for (int i = 0; i < mParticleCount; i++) {
+            Particle p = mParticles[i];
+            // 根据动画进程，修改粒子的参数
+            p.advance(animatedValue, mEndValue);
+            if (p.alpha > 0) {
+                mPaint.setColor(p.color);
+                // 优化：使用预计算的 baseAlpha，避免每次调用 Color.alpha()
+                mPaint.setAlpha((int) (p.baseAlpha * p.alpha));
+                
+                if (mShape == SHAPE_SQUARE) {
+                    // 方形：以 (cx, cy) 为中心，radius 为半边长
+                    canvas.drawRect(
+                        p.cx - p.radius, 
+                        p.cy - p.radius, 
+                        p.cx + p.radius, 
+                        p.cy + p.radius, 
+                        mPaint
+                    );
+                } else {
+                    // 圆形（默认）
+                    canvas.drawCircle(p.cx, p.cy, p.radius, mPaint);
                 }
+
+                // 更新脏区
+                hasVisibleParticle = true;
+                if (p.cx - p.radius < minX) minX = p.cx - p.radius;
+                if (p.cx + p.radius > maxX) maxX = p.cx + p.radius;
+                if (p.cy - p.radius < minY) minY = p.cy - p.radius;
+                if (p.cy + p.radius > maxY) maxY = p.cy + p.radius;
             }
         }
 
+        // 保存脏区供 ParticleSmasher 统一处理
         if (hasVisibleParticle) {
-            // 脏区刷新：只刷新粒子活动的区域
-            mContainer.invalidate((int) minX, (int) minY, (int) maxX + 1, (int) maxY + 1);
+            mDirtyRect.set((int) minX, (int) minY, (int) maxX + 1, (int) maxY + 1);
         } else {
-            // 如果所有粒子都不可见，可能需要刷新一次确保清除
-             mContainer.invalidate();
+            mDirtyRect.setEmpty();
         }
         return true;
+    }
+
+    /**
+     * 获取当前帧的脏区
+     * @return 脏区矩形
+     */
+    public Rect getDirtyRect() {
+        return mDirtyRect;
     }
 
 

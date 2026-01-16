@@ -34,8 +34,11 @@ public class RiseParticle extends Particle {
      * @param verticalMultiple   垂直变化幅度（向上移动的距离）
      * @param startRandomness    起跑随机延迟系数
      * @param endRandomness      结束随机提前系数
+     * @param scaleMode          缩放模式
      */
-    public RiseParticle(int direction, Point point, int color, int radius, Rect rect, float endValue, Random random, float horizontalMultiple, float verticalMultiple, float startRandomness, float endRandomness, int scaleMode) {
+    public RiseParticle(int direction, Point point, int color, int radius, Rect rect, float endValue, 
+                        Random random, float horizontalMultiple, float verticalMultiple, 
+                        float startRandomness, float endRandomness, ScaleMode scaleMode) {
 
         this.color = color;
         this.baseAlpha = android.graphics.Color.alpha(color);
@@ -45,13 +48,14 @@ public class RiseParticle extends Particle {
 
         float nextFloat = random.nextFloat();
 
-        baseRadius = getBaseRadius(radius, random, nextFloat);
+        // Rise 粒子半径略有增大
+        baseRadius = calculateBaseRadius(radius, random, nextFloat, 1.2f, 1.4f);
         this.radius = baseRadius;
 
-        // 水平方向随机偏移
-        horizontalElement = getHorizontalElement(rect, random, nextFloat, horizontalMultiple);
+        // 水平方向随机偏移（幅度较小）
+        horizontalElement = calculateHorizontalElement(rect, random, nextFloat, horizontalMultiple) * 0.5f;
         // 垂直方向向上移动距离
-        verticalElement = getVerticalElement(rect, random, nextFloat, verticalMultiple);
+        verticalElement = calculateVerticalElement(rect, random, nextFloat, verticalMultiple);
 
         baseCx = point.x;
         baseCy = point.y;
@@ -62,55 +66,29 @@ public class RiseParticle extends Particle {
         left = (baseCx - rect.left) / (float) rect.width();
         top = (baseCy - rect.top) / (float) rect.height();
 
-        // 随机延迟启动
-        font = endValue * startRandomness * random.nextFloat();
-        later = endRandomness * random.nextFloat();
-    }
-
-    private static float getBaseRadius(float radius, Random random, float nextFloat) {
-        float r = radius + radius * (random.nextFloat() - 0.5f) * 0.5f;
-        r = nextFloat < 0.6f ? r :
-                nextFloat < 0.8f ? r * 1.2f : r * 1.4f;
-        return r;
-    }
-
-    private static float getHorizontalElement(Rect rect, Random random, float nextFloat, float horizontalMultiple) {
-        // 水平方向随机左右偏移
-        float horizontal = rect.width() * (random.nextFloat() - 0.5f) * 0.5f;
-        horizontal = nextFloat < 0.2f ? horizontal :
-                nextFloat < 0.8f ? horizontal * 0.6f : horizontal * 0.3f;
-        return horizontal * horizontalMultiple;
-    }
-
-    private static float getVerticalElement(Rect rect, Random random, float nextFloat, float verticalMultiple) {
-        // 向上移动的距离（正值，在 advance 中会取负）
-        float vertical = rect.height() * (random.nextFloat() * 0.5f + 0.5f);
-        vertical = nextFloat < 0.2f ? vertical :
-                nextFloat < 0.8f ? vertical * 1.2f : vertical * 1.4f;
-        return vertical * verticalMultiple;
+        startOffset = endValue * startRandomness * random.nextFloat();
+        endFadeOffset = endRandomness * random.nextFloat();
     }
 
     @Override
     public void advance(float factor, float endValue) {
         float normalization = factor / endValue;
 
-        if (normalization < font) {
+        if (normalization < startOffset) {
             alpha = 1;
             return;
         }
 
-        if (normalization > 1f - later) {
+        if (normalization > 1f - endFadeOffset) {
             alpha = 0;
             return;
         }
         alpha = 1;
 
-        normalization = (normalization - font) / (1f - font - later);
+        normalization = (normalization - startOffset) / (1f - startOffset - endFadeOffset);
         
-        // 超过 60% 开始变透明
-        if (normalization >= 0.6f) {
-            alpha = 1f - (normalization - 0.6f) / 0.4f;
-        }
+        // Rise 使用不同的淡出阈值
+        alpha = calculateFadeAlpha(normalization, RISE_FADE_START_THRESHOLD, RISE_FADE_DURATION_RATIO);
 
         float realValue = normalization * endValue;
         float progress = 0;
@@ -118,7 +96,6 @@ public class RiseParticle extends Particle {
         // 根据方向决定粒子何时开始移动
         switch (direction) {
             case DIRECTION_LEFT:
-                // 从左往右：左边的粒子先动
                 if (realValue > left) {
                     progress = realValue - left;
                     cy = baseCy - verticalElement * progress;
@@ -126,7 +103,6 @@ public class RiseParticle extends Particle {
                 }
                 break;
             case DIRECTION_RIGHT:
-                // 从右往左：右边的粒子先动
                 if (realValue > (1 - left)) {
                     progress = realValue - (1 - left);
                     cy = baseCy - verticalElement * progress;
@@ -134,7 +110,6 @@ public class RiseParticle extends Particle {
                 }
                 break;
             case DIRECTION_TOP:
-                // 从上到下：上面的粒子先动
                 if (realValue > top) {
                     progress = realValue - top;
                     cy = baseCy - verticalElement * progress;
@@ -149,14 +124,8 @@ public class RiseParticle extends Particle {
                 break;
         }
 
-        if (scaleMode == 2) { // 2 = SCALE_UP from SmashAnimator
-             radius = baseRadius + baseRadius / 4 * progress;
-        } else if (scaleMode == 1) { // 1 = SCALE_SAME
-             radius = baseRadius;
-        } else { // 0 = SCALE_DOWN
-             radius = baseRadius * (1f - progress * 0.3f);
-        }
-
+        // Rise 使用不同的缩放因子
+        radius = calculateRadius(baseRadius, progress * 0.3f, scaleMode, 0.25f);
         if (radius < 0) radius = 0;
     }
 }
