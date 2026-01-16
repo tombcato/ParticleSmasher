@@ -9,8 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * <pre>
@@ -24,7 +24,8 @@ import java.util.List;
 
 public class ParticleSmasher extends View {
 
-    private List<SmashAnimator> mAnimators = new ArrayList<>();
+    // 使用 CopyOnWriteArrayList 避免遍历时的并发修改问题
+    private List<SmashAnimator> mAnimators = new CopyOnWriteArrayList<>();
     private Canvas mCanvas;
     private Activity mActivity;
 
@@ -62,6 +63,20 @@ public class ParticleSmasher extends View {
         SmashAnimator animator = new SmashAnimator(this, view);
         mAnimators.add(animator);
         return animator;
+    }
+
+    /**
+     * 检查指定View是否正在执行动画
+     * @param view 要检查的View
+     * @return 是否正在动画中
+     */
+    public boolean isAnimating(View view) {
+        for (SmashAnimator animator : mAnimators) {
+            if (animator.getAnimatorView() == view) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -124,7 +139,15 @@ public class ParticleSmasher extends View {
      * @param view      已经隐藏的View
      */
     public void reShowView(View view) {
-        view.animate().setDuration(100).setStartDelay(0).scaleX(1).scaleY(1).translationX(0).translationY(0).alpha(1).start();
+        // 取消所有pending动画
+        view.animate().cancel();
+        // 直接设置属性，确保立即生效（不用异步动画）
+        view.setScaleX(1f);
+        view.setScaleY(1f);
+        view.setAlpha(1f);
+        view.setTranslationX(0f);
+        view.setTranslationY(0f);
+        view.setVisibility(View.VISIBLE);
     }
 
 
