@@ -2,6 +2,7 @@
 
 [![](https://jitpack.io/v/tombcato/ParticleSmasher.svg)](https://jitpack.io/#tombcato/ParticleSmasher)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Download Demo](https://img.shields.io/badge/Download-Demo%20App-red.svg)](https://github.com/tombcato/ParticleSmasher/releases)
 
 **English** | [中文](README_CN.md)
 
