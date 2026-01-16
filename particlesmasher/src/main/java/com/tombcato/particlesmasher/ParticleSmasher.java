@@ -1,4 +1,4 @@
-package com.fadai.particlesmasher;
+package com.tombcato.particlesmasher;
 
 import android.app.Activity;
 import android.content.Context;
@@ -102,13 +102,26 @@ public class ParticleSmasher extends View {
      * @return         获取到的图片
      */
     public Bitmap createBitmapFromView(View view) {
+        return createBitmapFromView(view, new Rect(0, 0, view.getWidth(), view.getHeight()));
+    }
 
+    /**
+     * 获取View指定区域的Bitmap
+     * @param view      来源View
+     * @param cropRect  裁剪区域（相对于View左上角）
+     * @return          获取到的图片
+     */
+    public Bitmap createBitmapFromView(View view, Rect cropRect) {
         view.clearFocus();
-        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        if (cropRect == null || cropRect.isEmpty() || view.getWidth() <= 0 || view.getHeight() <= 0) {
+            return null;
+        }
+        Bitmap bitmap = Bitmap.createBitmap(cropRect.width(), cropRect.height(), Bitmap.Config.ARGB_8888);
         if (bitmap != null) {
             synchronized (mCanvas) {
                 Canvas canvas = mCanvas;
                 canvas.setBitmap(bitmap);
+                canvas.translate(-cropRect.left, -cropRect.top);
                 view.draw(canvas);
                 canvas.setBitmap(null);
             }

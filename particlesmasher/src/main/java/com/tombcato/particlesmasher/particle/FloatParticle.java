@@ -1,4 +1,4 @@
-package com.fadai.particlesmasher.particle;
+package com.tombcato.particlesmasher.particle;
 
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -10,16 +10,23 @@ import java.util.Random;
  *     author : FaDai
  *     e-mail : i_fadai@163.com
  *     time   : 2017/12/20
- *     desc   : 下落粒子的实体类
+ *     desc   : 飘落粒子
  *     version: 1.0
  * </pre>
  */
 
-public class DropParticle extends Particle {
+public class FloatParticle extends Particle {
+
+    private float top;
+    private float left;
+    public static final int ORIENTATION_LEFT=1,ORIENTATION_RIGHT=2,ORIENTATION_TOP=3,ORIENTATION_BOTTOM=4;
+    // 方向
+    private int orientation=ORIENTATION_TOP;
 
     /**
      * 生成粒子
-     * @param point              粒子在图片中原始位置
+     * @param orientation        方向
+     * @param point              粒子在图片中的位置
      * @param color              粒子颜色
      * @param radius             粒子的半径
      * @param rect               View区域的矩形
@@ -27,29 +34,37 @@ public class DropParticle extends Particle {
      * @param random             随机数
      * @param horizontalMultiple 水平变化幅度
      * @param verticalMultiple   垂直变化幅度
+     * @param startRandomness    起跑随机延迟系数
+     * @param endRandomness      结束随机提前系数
      */
-    public DropParticle(Point point, int color, int radius, Rect rect, float endValue, Random random, float horizontalMultiple, float verticalMultiple){
+    public FloatParticle(int orientation,Point point, int color, int radius, Rect rect, float endValue, Random random, float horizontalMultiple, float verticalMultiple, float startRandomness, float endRandomness, int scaleMode){
         
         this.color = color;
+        this.baseAlpha = android.graphics.Color.alpha(color);
+        this.scaleMode = scaleMode;
         alpha = 1;
 
         // 参与横向变化参数和竖直变化参数计算，规则：横向参数相对值越大，竖直参数越小
         float nextFloat = random.nextFloat();
 
-         baseRadius = getBaseRadius(radius, random, nextFloat);
-         this.radius =  baseRadius;
+        baseRadius = getBaseRadius(radius, random, nextFloat);
+        this.radius =  baseRadius;
 
-         horizontalElement = getHorizontalElement(rect, random, nextFloat, horizontalMultiple);
-         verticalElement = getVerticalElement(rect, random, nextFloat, verticalMultiple);
+        horizontalElement = getHorizontalElement(rect, random, nextFloat, horizontalMultiple);
+        verticalElement = getVerticalElement(rect, random, nextFloat, verticalMultiple);
 
-         baseCx = point.x;
-         baseCy = point.y;
-         cx =  baseCx;
-         cy =  baseCy;
+        baseCx = point.x;
+        baseCy = point.y;
+        cx =  baseCx;
+        cy =  baseCy;
 
 
-         font = endValue / 10 * random.nextFloat();
-         later = 0.4f * random.nextFloat();
+        font = endValue * startRandomness * random.nextFloat();
+        later = endRandomness * random.nextFloat();
+
+        left=(baseCx-rect.left)/rect.width();
+        top=(baseCy-rect.top)/rect.height();
+        this.orientation=orientation;
     }
 
     private static float getBaseRadius(float radius, Random random, float nextFloat) {
@@ -87,7 +102,6 @@ public class DropParticle extends Particle {
         return vertical * verticalMultiple;
     }
 
-
     public void advance(float factor, float endValue) {
 
         // 动画进行到了几分之几
@@ -97,6 +111,7 @@ public class DropParticle extends Particle {
             alpha = 1;
             return;
         }
+
         if ( normalization > 1f - later) {
             alpha = 0;
             return;
@@ -112,15 +127,46 @@ public class DropParticle extends Particle {
 
         float realValue = normalization * endValue;
 
-        // y=j+k*x，j、k都是常数，x为 0~1.4
-        cx = baseCx + horizontalElement * realValue;
+        // 重点：这里使用了realValue（0~1），而不是normalization（0~1.4）。如果使用nor的话，在最后面开始飘落的粒子就会全透明看不到了。
+        switch (orientation){
+            case ORIENTATION_LEFT:
+                if(realValue>left){
+                    cy=baseCy+verticalElement*(realValue-left);
+                    cx = baseCx + horizontalElement * (realValue-left);
+                }
+                break;
+            case ORIENTATION_RIGHT:
+                if(realValue>(1-left)){
+                    cy=baseCy+verticalElement*(realValue-(1-left));
+                    cx = baseCx + horizontalElement * (realValue-(1-left));
+                }
+                break;
+            case ORIENTATION_TOP:
+                if(realValue>top){
+                    cy=baseCy+verticalElement*(realValue-top);
+                    cx = baseCx + horizontalElement * (realValue-top);
+                }
+                break;
+            case ORIENTATION_BOTTOM:
+                if(realValue>(1-top)){
+                    cy=baseCy+verticalElement*(realValue-(1-top));
+                    cx = baseCx + horizontalElement * (realValue-(1-top));
+                }
+                break;
 
-        // 下落粒子，y轴持续增大
-        cy = baseCy + verticalElement * realValue;
+        }
 
-        radius = baseRadius + baseRadius / 6 * realValue;
+        if (scaleMode == 2) { // 2 = SCALE_UP from SmashAnimator
+             radius = baseRadius + baseRadius / 6 * realValue;
+        } else if (scaleMode == 1) { // 1 = SCALE_SAME
+             radius = baseRadius;
+        } else { // 0 = SCALE_DOWN
+             radius = baseRadius * (1f - normalization);
+        }
 
     }
+
+
 
 
 }

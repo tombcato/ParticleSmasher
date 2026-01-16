@@ -1,4 +1,4 @@
-package com.fadai.particlesmasher;
+package com.tombcato.particlesmasher;
 
 import android.content.res.Resources;
 

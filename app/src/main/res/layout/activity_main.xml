@@ -1,211 +1,359 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context="com.fadai.sample.MainActivity">
 
+    <!-- Title Header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ParticleSmasher Demo"
+        android:textColor="@android:color/black"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingTop="48dp"
+        android:paddingBottom="16dp"
+        android:background="@android:color/white"/>
+
+    <!-- Top Fixed Image -->
+    <ImageView
+        android:id="@+id/iv_test"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/test" />
+
+    <!-- Middle Scrollable Controls -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/iv_cover"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:visibility="gone"
+                android:src="@drawable/chrome_icon"/>
+
+            <!-- 控制面板 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="动画样式"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"/>
+
+            <Spinner
+                android:id="@+id/spinner_style"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="粒子形状"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+
+            <Spinner
+                android:id="@+id/spinner_shape"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="插值器"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+
+            <Spinner
+                android:id="@+id/spinner_interpolator"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"/>
+
+            <!-- Scale Mode -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="缩放模式"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+
+            <Spinner
+                android:id="@+id/spinner_scale_mode"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"/>
+
+            <!-- Duration -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="动画时长"/>
+                <TextView
+                    android:id="@+id/tv_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1000ms"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_duration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="3000"
+                android:progress="1000"/>
+
+            <!-- StartDelay -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="开始延迟"/>
+                <TextView
+                    android:id="@+id/tv_start_delay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="150ms"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_start_delay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="1000"
+                android:progress="150"/>
+
+            <!-- Horizontal Multiple -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="水平幅度"/>
+                <TextView
+                    android:id="@+id/tv_horizontal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3.0"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="30"/>
+
+            <!-- Vertical Multiple -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="垂直幅度"/>
+                <TextView
+                    android:id="@+id/tv_vertical"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4.0"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="40"/>
+
+            <!-- Particle Radius -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="粒子半径"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <SeekBar
+                    android:id="@+id/seek_radius"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="10"
+                    android:progress="2"/>
+                <TextView
+                    android:id="@+id/tv_radius"
+                    android:layout_width="50dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:text="2dp"/>
+            </LinearLayout>
+
+            <!-- Gap -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="粒子间距 (Gap)"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <SeekBar
+                    android:id="@+id/seek_gap"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="30"
+                    android:progress="10"/> <!-- 0-30, 10 is center (0 gap) -->
+                <TextView
+                    android:id="@+id/tv_gap"
+                    android:layout_width="50dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:text="0dp"/>
+            </LinearLayout>
+
+            <!-- Randomness -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="起跑随机性 (Start Random)"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="起跑分散度"/>
+                <TextView
+                    android:id="@+id/tv_start_randomness"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.10"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_start_randomness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="10"/>
+
+            <!-- End Randomness -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="落后淘汰率"/>
+                <TextView
+                    android:id="@+id/tv_end_randomness"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.40"/>
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seek_end_randomness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="40"/>
+
+            <!-- Hide Animation Switch -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="抖动缩放动画"/>
+                <Switch
+                    android:id="@+id/switch_hide_anim"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Fixed Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center"
+        android:background="#EEEEEE">
 
-        <!-- 测试图片 -->
-        <ImageView
-            android:id="@+id/iv_test"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/test"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- 控制面板 -->
-        <TextView
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btn_start"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="动画样式"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp"/>
+            android:text="执行动画"
+            android:layout_marginEnd="4dp"/>
 
-        <Spinner
-            android:id="@+id/spinner_style"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"/>
+        <Button
+            android:id="@+id/btn_reset"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="重置View"
+            android:layout_marginEnd="4dp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btn_save"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="粒子形状"
-            android:textStyle="bold"
-            android:layout_marginTop="12dp"/>
-
-        <Spinner
-            android:id="@+id/spinner_shape"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"/>
-
-        <!-- Duration -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="动画时长"/>
-            <TextView
-                android:id="@+id/tv_duration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="1000ms"/>
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/seek_duration"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="3000"
-            android:progress="1000"/>
-
-        <!-- StartDelay -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="开始延迟"/>
-            <TextView
-                android:id="@+id/tv_start_delay"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="150ms"/>
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/seek_start_delay"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="1000"
-            android:progress="150"/>
-
-        <!-- Horizontal Multiple -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="水平幅度"/>
-            <TextView
-                android:id="@+id/tv_horizontal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="3.0"/>
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/seek_horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="30"/>
-
-        <!-- Vertical Multiple -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="垂直幅度"/>
-            <TextView
-                android:id="@+id/tv_vertical"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="4.0"/>
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/seek_vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="40"/>
-
-        <!-- Particle Radius -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="粒子半径"/>
-            <TextView
-                android:id="@+id/tv_radius"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="2dp"/>
-        </LinearLayout>
-        <SeekBar
-            android:id="@+id/seek_radius"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="10"
-            android:progress="2"/>
-
-        <!-- Hide Animation Switch -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="抖动缩放动画"/>
-            <Switch
-                android:id="@+id/switch_hide_anim"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"/>
-        </LinearLayout>
-
-        <!-- Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="24dp"
-            android:gravity="center">
-
-            <Button
-                android:id="@+id/btn_start"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="执行动画"
-                android:layout_marginEnd="8dp"/>
-
-            <Button
-                android:id="@+id/btn_reset"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="重置"/>
-        </LinearLayout>
-
+            android:text="保存配置"/>
     </LinearLayout>
-</ScrollView>
+
+</LinearLayout>

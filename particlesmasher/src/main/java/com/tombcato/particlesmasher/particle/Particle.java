@@ -1,4 +1,4 @@
-package com.fadai.particlesmasher.particle;
+package com.tombcato.particlesmasher.particle;
 
 /**
  * <pre>
@@ -13,6 +13,7 @@ package com.fadai.particlesmasher.particle;
 public abstract class Particle {
 
     public int color;                // 颜色
+    public int baseAlpha;            // 初始透明度 (0~255)
     public float radius;             // 半径
     public float alpha;              // 透明度（0~1）
     public float cx;                 // 圆心 x
@@ -28,6 +29,8 @@ public abstract class Particle {
 
     public float font;               // 决定了粒子在动画开始多久之后，开始显示
     public float later;              // 决定了粒子动画结束前多少时间开始隐藏
+    
+    public int scaleMode;            // 缩放模式
 
     public void advance(float factor, float endValue) {
     }

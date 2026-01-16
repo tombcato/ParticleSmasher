@@ -1,4 +1,4 @@
-package com.fadai.particlesmasher.particle;
+package com.tombcato.particlesmasher.particle;
 
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -32,11 +32,15 @@ public class RiseParticle extends Particle {
      * @param random             随机数
      * @param horizontalMultiple 水平变化幅度
      * @param verticalMultiple   垂直变化幅度（向上移动的距离）
+     * @param startRandomness    起跑随机延迟系数
+     * @param endRandomness      结束随机提前系数
      */
-    public RiseParticle(int direction, Point point, int color, int radius, Rect rect, float endValue, Random random, float horizontalMultiple, float verticalMultiple) {
+    public RiseParticle(int direction, Point point, int color, int radius, Rect rect, float endValue, Random random, float horizontalMultiple, float verticalMultiple, float startRandomness, float endRandomness, int scaleMode) {
 
         this.color = color;
+        this.baseAlpha = android.graphics.Color.alpha(color);
         this.direction = direction;
+        this.scaleMode = scaleMode;
         alpha = 1;
 
         float nextFloat = random.nextFloat();
@@ -59,8 +63,8 @@ public class RiseParticle extends Particle {
         top = (baseCy - rect.top) / (float) rect.height();
 
         // 随机延迟启动
-        font = endValue / 10 * random.nextFloat();
-        later = 0.3f * random.nextFloat();
+        font = endValue * startRandomness * random.nextFloat();
+        later = endRandomness * random.nextFloat();
     }
 
     private static float getBaseRadius(float radius, Random random, float nextFloat) {
@@ -109,42 +113,48 @@ public class RiseParticle extends Particle {
         }
 
         float realValue = normalization * endValue;
+        float progress = 0;
 
         // 根据方向决定粒子何时开始移动
         switch (direction) {
             case DIRECTION_LEFT:
                 // 从左往右：左边的粒子先动
                 if (realValue > left) {
-                    float progress = realValue - left;
+                    progress = realValue - left;
                     cy = baseCy - verticalElement * progress;
                     cx = baseCx + horizontalElement * progress;
-                    radius = baseRadius * (1f - progress * 0.3f);
                 }
                 break;
             case DIRECTION_RIGHT:
                 // 从右往左：右边的粒子先动
                 if (realValue > (1 - left)) {
-                    float progress = realValue - (1 - left);
+                    progress = realValue - (1 - left);
                     cy = baseCy - verticalElement * progress;
                     cx = baseCx + horizontalElement * progress;
-                    radius = baseRadius * (1f - progress * 0.3f);
                 }
                 break;
             case DIRECTION_TOP:
                 // 从上到下：上面的粒子先动
                 if (realValue > top) {
-                    float progress = realValue - top;
+                    progress = realValue - top;
                     cy = baseCy - verticalElement * progress;
                     cx = baseCx + horizontalElement * progress;
-                    radius = baseRadius * (1f - progress * 0.3f);
                 }
                 break;
             default:
                 // 同时向上
+                progress = realValue;
                 cy = baseCy - verticalElement * realValue;
                 cx = baseCx + horizontalElement * realValue;
-                radius = baseRadius * (1f - realValue * 0.3f);
                 break;
+        }
+
+        if (scaleMode == 2) { // 2 = SCALE_UP from SmashAnimator
+             radius = baseRadius + baseRadius / 4 * progress;
+        } else if (scaleMode == 1) { // 1 = SCALE_SAME
+             radius = baseRadius;
+        } else { // 0 = SCALE_DOWN
+             radius = baseRadius * (1f - progress * 0.3f);
         }
 
         if (radius < 0) radius = 0;
