@@ -1,19 +1,87 @@
-> Android 粒子破碎效果，可以使用于任何View。
+# ParticleSmasher
 
-## 特色：
-- **10种动画效果**：爆炸、下落、四个方向飘落、四个方向向上飘散
-- 链式调用，自定义动画时间、样式、动画幅度等
-- 支持圆形/方形粒子
-- 支持开关抖动缩放动画
+[![](https://jitpack.io/v/tombcato/ParticleSmasher.svg)](https://jitpack.io/#tombcato/ParticleSmasher)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
-## 效果图：
+**English** | [中文](README_CN.md)
 
-![六种效果演示](https://github.com/ifadai/ParticleSmasher/blob/master/screenshot/screen1.gif)
+A powerful and highly optimized Android library that disintegrates any View into particles. Perfect for delete animations, transitions, or satisfying visual effects. fork from [ParticleSmasher](https://github.com/ifadai/ParticleSmasher)。
 
-## 用法：
-### 导入
+<img src="screen.gif" width="300" />
 
-**Step 1.** 在根目录 `settings.gradle` 添加 JitPack 仓库：
+## 📖 Index
+
+- [✨ Features](#-features)
+- [🚀 Performance Optimizations (v2.0)](#-performance-optimizations-v20)
+- [📦 Installation](#-installation)
+- [💻 Usage](#-usage)
+    - [Basic Usage](#basic-usage)
+    - [Advanced Configuration](#advanced-configuration)
+    - [Utility Methods](#utility-methods)
+- [🎨 Styles & Configuration](#-styles--configuration)
+    - [Animation Styles](#animation-styles-setstyle)
+    - [Scale Modes](#scale-modes-setscalemode)
+- [📄 License](#-license)
+
+## ✨ Features
+
+- **10 Core Animations**: Explosion, Drop, Float (4 directions), Rise (4 directions).
+- **Highly Customizable**: Control duration, particle size, shape, spread range, and more.
+- **Fluent API**: Builder-style configuration for clean and readable code.
+- **Visual Effects**:
+    - **Scale Modes**: Particles can shrink, grow, or stay the same size.
+    - **Density Control**: Adjust particle gap for sparse or dense (overlapping) effects.
+    - **Smart Randomness**: Configurable start delays and fade-out randomness.
+- **Performance Optimized**: Built for smooth 60fps animations even with high particle counts.
+
+## 🚀 Performance Optimizations (v2.0)
+
+ParticleSmasher v2.0 introduces significant performance improvements over the original version:
+
+1.  **Dirty Region Invalidation**: Instead of redrawing the entire screen every frame, the engine calculates the real-time bounding box of all active particles and only invalidates the necessary dirty region. This massively reduces GPU overdraw and improves frame rates.
+2.  **Alpha Pre-calculation**: Particle alpha values are cached during initialization, eliminating thousands of redundant `Color.alpha()` calls per frame in the draw loop.
+3.  **Memory Efficiency**: Usage of `CopyOnWriteArrayList` and optimized object lifecycle management prevents concurrency issues and reduces memory churn.
+
+## Implemented Features
+
+### Core & Fixes
+- [x] **Gradle & AGP Upgrade** (Gradle 8.13, AGP 8.13.2)
+- [x] **AndroidX Migration** (Support → AndroidX)
+- [x] **Java 17 Support**
+- [x] **Critical Bug Fixes**
+    - [x] Fixed animation position drift
+    - [x] Fixed unresponsive click after hide (reShowView)
+    - [x] **Fixed crash when View is not laid out** (width/height <= 0)
+    - [x] **Fixed animation clipping for partially visible Views** (Render only visible area)
+- [x] **Concurrency Optimization** (CopyOnWriteArrayList)
+
+### Animation Effects
+- [x] **New Animation Styles** (Rise series: Upward float)
+- [x] **Particle Shapes** (Circle / Square)
+- [x] **Interpolator Selection** (Support custom interpolators)
+- [x] **Shake Animation Toggle**
+- [x] **Randomness Configuration**
+    - `setStartRandomness()`: Controls the uniformity of particle launch
+    - `setEndRandomness()`: Controls the randomness of particle fading
+- [x] **Particle Scale Modes**
+    - `SCALE_DOWN`: Shrink over time (Default)
+    - `SCALE_SAME`: Constant size
+    - `SCALE_UP`: Grow over time
+- [x] **Particle Gap/Density Control**
+    - `setParticleGap(int px)`: Allows positive gap (sparse) or negative gap (overlapping/dense).
+
+### Demo & UI
+- [x] **Full Control Panel** (Configure all parameters)
+- [x] **Config Persistence** (SharedPreferences)
+- [x] **Immersive Status Bar** (White background + Dark icons)
+- [x] **Layout Optimization** (Fixed header/footer, scrollable content)
+- [x] **Concurrent Animation Demo** (Support smashing multiple views simultaneously)
+
+## 📦 Installation
+
+### Step 1. Add the JitPack repository
+In your `settings.gradle` (or project-level `build.gradle`):
+
 ```groovy
 dependencyResolutionManagement {
     repositories {
@@ -23,100 +91,100 @@ dependencyResolutionManagement {
 }
 ```
 
-**Step 2.** 在 `app/build.gradle` 添加依赖：
+### Step 2. Add the dependency
+In your app-level `build.gradle`:
+
 ```groovy
 dependencies {
     implementation 'com.github.tombcato:ParticleSmasher:v2.0.0'
 }
 ```
-### 简单使用：
+
+## 💻 Usage
+
+### Basic Usage
+The simplest way to smash a view:
 
 ```java
 ParticleSmasher smasher = new ParticleSmasher(this);
-// 默认为爆炸动画
-smasher.with(view).start();
+
+// Smash it! (Default: Explosion effect)
+smasher.with(myView).start();
 ```
 
-### 完整配置：
+### Advanced Configuration
+Customize every aspect of the animation:
 
 ```java
-smasher.with(view)
-    .setStyle(SmashAnimator.STYLE_RISE)       // 动画样式
-    .setShape(SmashAnimator.SHAPE_CIRCLE)     // 粒子形状：圆形/方形
-    .setDuration(1000)                         // 动画时长 (ms)
-    .setStartDelay(150)                        // 开始延迟 (ms)
-    .setHorizontalMultiple(3f)                 // 水平运动幅度
-    .setVerticalMultiple(4f)                   // 垂直运动幅度
-    .setParticleRadius(Utils.dp2Px(2))         // 粒子半径
-    .setHideAnimation(true)                    // 抖动+缩放隐藏动画
+smasher.with(targetView)
+    .setStyle(SmashAnimator.STYLE_RISE)        // Animation Style
+    .setShape(SmashAnimator.SHAPE_CIRCLE)      // Particle Shape: CIRCLE or SQUARE
+    .setDuration(1500)                         // Duration in ms
+    .setStartDelay(100)                        // Delay before start
+    .setHorizontalMultiple(3f)                 // Horizontal spread factor
+    .setVerticalMultiple(4f)                   // Vertical spread factor
+    .setParticleRadius(Utils.dp2Px(2))         // Particle Base Radius
+    .setParticleGap(Utils.dp2Px(0))            // Gap: <0 for overlap(dense), >0 for sparse
+    .setScaleMode(SmashAnimator.SCALE_DOWN)    // Scale: DOWN, SAME, or UP
+    .setStartRandomness(0.1f)                  // 0.0 ~ 1.0: Randomness of departure
+    .setEndRandomness(0.5f)                    // 0.0 ~ 1.0: Randomness of fading
+    .setHideAnimation(true)                    // Enable shake & scale-down of original view
     .addAnimatorListener(new SmashAnimator.OnAnimatorListener() {
         @Override
-        public void onAnimatorStart() {
-            // 动画开始回调
-        }
-
-        @Override
         public void onAnimatorEnd() {
-            // 动画结束回调
+            // Callback when animation finishes
         }
     })
     .start();
 ```
+Demo config:
+![alt text](6ba9f2ffad988a7c6e57162f1353eed4.jpg)
 
-### 动画样式：
-
-| 样式常量 | 效果 |
-|---------|------|
-| `STYLE_EXPLOSION` | 四散爆炸（默认） |
-| `STYLE_DROP` | 向下坠落 |
-| `STYLE_FLOAT_LEFT` | 从左往右逐列飘落 |
-| `STYLE_FLOAT_RIGHT` | 从右往左逐列飘落 |
-| `STYLE_FLOAT_TOP` | 从上往下逐行飘落 |
-| `STYLE_FLOAT_BOTTOM` | 从下往上逐行飘落 |
-| `STYLE_RISE` | 向上飘散（同时） |
-| `STYLE_RISE_LEFT` | 从左往右逐列向上飘散 |
-| `STYLE_RISE_RIGHT` | 从右往左逐列向上飘散 |
-| `STYLE_RISE_TOP` | 从上往下逐行向上飘散 |
-
-### 让View重新显示：
+### Utility Methods
 
 ```java
+// Check if a view is currently animating
+if (smasher.isAnimating(view)) { ... }
+
+// Restore a smashed view to its original state
 smasher.reShowView(view);
 ```
 
-### 检查动画状态：
+## 🎨 Styles & Configuration
 
-```java
-if (smasher.isAnimating(view)) {
-    // View 正在动画中
-}
+### Animation Styles (`setStyle`)
+| Constant | Description |
+|:---|:---|
+| `STYLE_EXPLOSION` | Particles explode in all directions (Default). |
+| `STYLE_DROP` | Particles fall downwards due to gravity. |
+| `STYLE_RISE` | Particles float upwards like smoke/magic. |
+| `STYLE_FLOAT_LEFT` | Float towards the right. |
+| `STYLE_FLOAT_RIGHT`| Float towards the left. |
+| `STYLE_FLOAT_TOP`  | Float downwards (layered). |
+| `STYLE_FLOAT_BOTTOM`| Float upwards (layered). |
+| ... | (And directional variations for Rise) |
+
+### Scale Modes (`setScaleMode`)
+| Constant | Description |
+|:---|:---|
+| `SCALE_DOWN` | Particles shrink over time (Default). Great for debris. |
+| `SCALE_SAME` | Particles maintain constant size. |
+| `SCALE_UP` | Particles grow over time. Good for smoke or magic effects. |
+
+## 📄 License
+
 ```
+Copyright 2026 TombCato
 
----
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-## 更新日志
+   http://www.apache.org/licenses/LICENSE-2.0
 
-### v2.0.0 (2026-01-16) 现代化升级
-
-**新功能**
-- 新增 4 种向上飘散效果：`STYLE_RISE`, `STYLE_RISE_LEFT`, `STYLE_RISE_RIGHT`, `STYLE_RISE_TOP`
-- 新增粒子形状配置：`setShape()` 支持圆形/方形
-- 新增抖动缩放动画开关：`setHideAnimation()`
-- 新增 `isAnimating(View)` 方法检查动画状态
-- 示例 App 改为控制面板 UI，可配置所有参数
-
-**Gradle & AGP 升级**
-- Gradle 4.1 → **8.13**
-- Android Gradle Plugin 3.0.0 → **8.13.2**
-- compileSdk / targetSdk 26 → **34**
-- minSdk 14 → **21**
-- Java 7 → **Java 17**
-
-**AndroidX 迁移**
-- `android.support.*` → `androidx.*`
-- 更新测试依赖到 AndroidX Test
-
-**Bug 修复**
-- 修复动画后再次点击位置漂移问题
-- 修复 View 隐藏状态下再次点击无动画问题
-- 使用 `CopyOnWriteArrayList` 避免并发修改异常
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```

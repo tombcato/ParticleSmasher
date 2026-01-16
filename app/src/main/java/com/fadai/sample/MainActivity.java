@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView mTvDuration, mTvStartDelay, mTvHorizontal, mTvVertical, mTvRadius, mTvGap;
     private TextView mTvStartRandomness, mTvEndRandomness;
     private Switch mSwitchHideAnim;
-    private Button mBtnStart, mBtnReset, mBtnSave;
+    private Button mBtnStart, mBtnSave;
 
     private static final String PREFS_NAME = "ParticleSmasherConfig";
 
@@ -130,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
 
         mSwitchHideAnim = findViewById(R.id.switch_hide_anim);
         mBtnStart = findViewById(R.id.btn_start);
-        mBtnReset = findViewById(R.id.btn_reset);
         mBtnSave = findViewById(R.id.btn_save);
 
         // Setup Spinners
@@ -210,7 +209,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Button listeners
         mBtnStart.setOnClickListener(v -> executeAnimation());
-        mBtnReset.setOnClickListener(v -> mSmasher.reShowView(mIvTest));
         mBtnSave.setOnClickListener(v -> saveConfig());
 
         // Click on image to trigger animation
@@ -267,6 +265,12 @@ public class MainActivity extends AppCompatActivity {
                 .setParticleGap(gapPx)
                 .setScaleMode(scaleMode)
                 .setHideAnimation(hideAnim)
+                .addAnimatorListener(new SmashAnimator.OnAnimatorListener() {
+                    @Override
+                    public void onAnimatorEnd() {
+                        mSmasher.reShowView(mIvTest);
+                    }
+                })
                 .start();
 
         mSmasher.with(mIvCover)
@@ -283,6 +287,12 @@ public class MainActivity extends AppCompatActivity {
                 .setParticleGap(gapPx)
                 .setScaleMode(scaleMode)
                 .setHideAnimation(hideAnim)
+                .addAnimatorListener(new SmashAnimator.OnAnimatorListener() {
+                    @Override
+                    public void onAnimatorEnd() {
+                        mSmasher.reShowView(mIvCover);
+                    }
+                })
                 .start();
     }
 }

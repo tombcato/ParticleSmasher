@@ -59,10 +59,25 @@ public class ParticleSmasher extends View {
     }
 
     public SmashAnimator with(View view) {
+        // 先停止该 View 上正在进行的动画
+        stopAnimation(view);
         // 每次都新建一个单独的SmashAnimator对象
         SmashAnimator animator = new SmashAnimator(this, view);
         mAnimators.add(animator);
         return animator;
+    }
+
+    /**
+     * 停止指定 View 的粒子动画
+     * @param view 目标 View
+     */
+    public void stopAnimation(View view) {
+        for (SmashAnimator animator : mAnimators) {
+            if (animator.getAnimatorView() == view) {
+                animator.stop();
+                mAnimators.remove(animator);
+            }
+        }
     }
 
     /**

@@ -288,6 +288,26 @@ public class SmashAnimator {
         return this;
     }
 
+
+    /**
+     * 停止动画并恢复 View 状态
+     */
+    public void stop() {
+        if (mValueAnimator != null) {
+            mValueAnimator.removeAllListeners();
+            mValueAnimator.cancel();
+        }
+        if (mAnimatorView != null) {
+            mAnimatorView.animate().cancel();
+            mAnimatorView.setScaleX(1f);
+            mAnimatorView.setScaleY(1f);
+            mAnimatorView.setAlpha(1f);
+            mAnimatorView.setTranslationX(0f);
+            mAnimatorView.setTranslationY(0f);
+            mAnimatorView.setVisibility(View.VISIBLE);
+        }
+    }
+
     /**
      *   开始动画
      */
@@ -296,6 +316,8 @@ public class SmashAnimator {
         if (mValueAnimator.isRunning()) {
             return;
         }
+        
+
         
         // 确保 View 处于正常可见状态再创建 bitmap
         // 如果 View 已经被隐藏（scale=0），需要先恢复
