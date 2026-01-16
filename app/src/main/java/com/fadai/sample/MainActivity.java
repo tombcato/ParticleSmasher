@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
         mSeekDuration.setProgress(prefs.getInt("duration", 1000));
         mSeekStartDelay.setProgress(prefs.getInt("startDelay", 150));
         mSeekHorizontal.setProgress(prefs.getInt("horizontal", 10));
-        mSeekVertical.setProgress(prefs.getInt("vertical", 40));
+        mSeekVertical.setProgress(prefs.getInt("vertical", 10));
         mSeekRadius.setProgress(prefs.getInt("radius", 2));
         mSeekGap.setProgress(prefs.getInt("gap", 10)); // Default 10 = 0dp gap
         mSeekStartRandomness.setProgress(prefs.getInt("startRandomness", 10));
