@@ -30,7 +30,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // 仅当 keystore 存在时才配置签名
+            if (file("keystore.jks").exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
