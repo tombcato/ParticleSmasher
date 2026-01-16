@@ -156,7 +156,7 @@ smasher.with(targetView)
     })
     .start();
 ```
-Demo:
+Demo config:
 ![alt text](6ba9f2ffad988a7c6e57162f1353eed4.jpg)
 
 ### 工具方法
