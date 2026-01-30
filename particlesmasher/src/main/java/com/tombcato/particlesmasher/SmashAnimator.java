@@ -515,8 +515,13 @@ public class SmashAnimator {
     private void setValueAnimator() {
         mValueAnimator.setDuration(mDuration);
         mValueAnimator.setStartDelay(mStartDelay);
-        // 先清除旧的 listener，防止重复添加
         mValueAnimator.removeAllListeners();
+        mValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mContainer.invalidate();
+            }
+        });
         mValueAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
