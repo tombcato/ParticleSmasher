@@ -16,6 +16,9 @@ import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.LinearLayout;
+import java.util.ArrayList;
+import java.util.List;
 
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,8 +38,14 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar mSeekStartRandomness, mSeekEndRandomness;
     private TextView mTvDuration, mTvStartDelay, mTvHorizontal, mTvVertical, mTvRadius, mTvGap;
     private TextView mTvStartRandomness, mTvEndRandomness;
-    private Switch mSwitchHideAnim;
+    private Switch mSwitchHideAnim, mSwitchManual;
     private Button mBtnStart, mBtnSave;
+    private LinearLayout mLayoutManualProgress;
+    private SeekBar mSeekManualProgress;
+    private TextView mTvManualProgress;
+    
+    // Manual control
+    private List<SmashAnimator> mManualAnimators = new ArrayList<>();
 
     private static final String PREFS_NAME = "ParticleSmasherConfig";
 
@@ -135,6 +144,11 @@ public class MainActivity extends AppCompatActivity {
         mTvEndRandomness = findViewById(R.id.tv_end_randomness);
 
         mSwitchHideAnim = findViewById(R.id.switch_hide_anim);
+        mSwitchManual = findViewById(R.id.switch_manual);
+        mLayoutManualProgress = findViewById(R.id.layout_manual_progress);
+        mSeekManualProgress = findViewById(R.id.seek_manual_progress);
+        mTvManualProgress = findViewById(R.id.tv_manual_progress);
+        
         mBtnStart = findViewById(R.id.btn_start);
         mBtnSave = findViewById(R.id.btn_save);
 
@@ -211,14 +225,50 @@ public class MainActivity extends AppCompatActivity {
         mSeekRadius.setOnSeekBarChangeListener(seekListener);
         mSeekGap.setOnSeekBarChangeListener(seekListener);
         mSeekStartRandomness.setOnSeekBarChangeListener(seekListener);
+        mSeekStartRandomness.setOnSeekBarChangeListener(seekListener);
         mSeekEndRandomness.setOnSeekBarChangeListener(seekListener);
 
+        // Manual Progress Listener
+        mSeekManualProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float p = progress / 1000f;
+                mTvManualProgress.setText(String.format("进度: %.1f%%", p * 100));
+                for (SmashAnimator animator : mManualAnimators) {
+                    animator.setProgress(p);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        // Manual Switch Listener
+        mSwitchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                mLayoutManualProgress.setVisibility(View.VISIBLE);
+                mBtnStart.setText("重置手动动效");
+                executeAnimation(true);
+            } else {
+                mLayoutManualProgress.setVisibility(View.GONE);
+                mBtnStart.setText("执行动画");
+                // Stop manual animators
+                for (SmashAnimator animator : mManualAnimators) {
+                    animator.stop();
+                }
+                mManualAnimators.clear();
+            }
+        });
+
         // Button listeners
-        mBtnStart.setOnClickListener(v -> executeAnimation());
+        mBtnStart.setOnClickListener(v -> executeAnimation(mSwitchManual.isChecked()));
         mBtnSave.setOnClickListener(v -> saveConfig());
 
         // Click on image to trigger animation
-        mIvTest.setOnClickListener(v -> executeAnimation());
+        mIvTest.setOnClickListener(v -> executeAnimation(mSwitchManual.isChecked()));
 
         updateLabels();
     }
@@ -236,7 +286,15 @@ public class MainActivity extends AppCompatActivity {
         mTvEndRandomness.setText(String.format("%.2f", mSeekEndRandomness.getProgress() / 100f));
     }
 
-    private void executeAnimation() {
+    private void executeAnimation(boolean isManual) {
+        // Clear previous manual animators if any
+        if (isManual) {
+             for (SmashAnimator animator : mManualAnimators) {
+                 animator.stop();
+             }
+             mManualAnimators.clear();
+        }
+
         int styleIndex = mSpinnerStyle.getSelectedItemPosition();
         int shapeIndex = mSpinnerShape.getSelectedItemPosition();
         int interpolatorIndex = mSpinnerInterpolator.getSelectedItemPosition();
@@ -258,20 +316,27 @@ public class MainActivity extends AppCompatActivity {
         boolean hideAnim = mSwitchHideAnim.isChecked();
 
         // 优化：抽取公共方法消除重复代码
-        animateView(mIvTest, style, shape, interpolator, scaleMode, duration, startDelay,
-                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim);
-        animateView(mIvCover, style, shape, interpolator, scaleMode, duration, startDelay,
-                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim);
+        SmashAnimator a1 = animateView(mIvTest, style, shape, interpolator, scaleMode, duration, startDelay,
+                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim, isManual);
+        SmashAnimator a2 = animateView(mIvCover, style, shape, interpolator, scaleMode, duration, startDelay,
+                horizontal, vertical, radius, gapPx, startRandomness, endRandomness, hideAnim, isManual);
+        
+        if (isManual) {
+            if (a1 != null) mManualAnimators.add(a1);
+            if (a2 != null) mManualAnimators.add(a2);
+            // Reset seekbar
+            mSeekManualProgress.setProgress(0);
+        }
     }
     
     /**
      * 执行粒子动画
      */
-    private void animateView(View target, int style, int shape, Interpolator interpolator,
+    private SmashAnimator animateView(View target, int style, int shape, Interpolator interpolator,
                              int scaleMode, long duration, long startDelay,
                              float horizontal, float vertical, int radius, int gapPx,
-                             float startRandomness, float endRandomness, boolean hideAnim) {
-        mSmasher.with(target)
+                             float startRandomness, float endRandomness, boolean hideAnim, boolean isManual) {
+        SmashAnimator animator = mSmasher.with(target)
                 .setStyle(style)
                 .setShape(shape)
                 .setInterpolator(interpolator)
@@ -290,7 +355,13 @@ public class MainActivity extends AppCompatActivity {
                     public void onAnimatorEnd() {
                         mSmasher.reShowView(target);
                     }
-                })
-                .start();
+                });
+        
+        if (isManual) {
+            animator.prepare();
+        } else {
+            animator.start();
+        }
+        return animator;
     }
 }

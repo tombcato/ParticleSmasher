@@ -88,6 +88,10 @@ public class SmashAnimator {
 
     private OnAnimatorListener mOnAnimatorLIstener;
 
+    // Manual control fields
+    private float mManualProgress = -1f;
+    private ValueAnimator mShakeAnimator;
+
     public SmashAnimator(ParticleSmasher view, View animatorView) {
         this.mContainer = view;
         init(animatorView);
@@ -315,6 +319,9 @@ public class SmashAnimator {
             mValueAnimator.removeAllListeners();
             mValueAnimator.cancel();
         }
+        if (mShakeAnimator != null) {
+            mShakeAnimator.cancel();
+        }
         if (mAnimatorView != null) {
             mAnimatorView.animate().cancel();
             mAnimatorView.setScaleX(1f);
@@ -386,6 +393,119 @@ public class SmashAnimator {
         calculateParticles(mBitmap);
         hideView(mAnimatorView, mStartDelay);
         mValueAnimator.start();
+        mContainer.invalidate();
+    }
+
+    /**
+     * 准备动画（不自动播放），用于手动控制
+     */
+    public void prepare() {
+        if (mAnimatorView.getWidth() <= 0 || mAnimatorView.getHeight() <= 0) {
+            mAnimatorView.post(this::prepare);
+            return;
+        }
+
+        if (mAnimatorView.getScaleX() == 0 || mAnimatorView.getAlpha() == 0) {
+            mAnimatorView.animate().cancel();
+            mAnimatorView.setScaleX(1f);
+            mAnimatorView.setScaleY(1f);
+            mAnimatorView.setAlpha(1f);
+            mAnimatorView.setTranslationX(0f);
+            mAnimatorView.setTranslationY(0f);
+        }
+
+        int[] location = new int[2];
+        mAnimatorView.getLocationOnScreen(location);
+        Rect fullViewRect = new Rect(location[0], location[1], location[0] + mAnimatorView.getWidth(), location[1] + mAnimatorView.getHeight());
+        Rect globalVisibleRect = new Rect();
+        boolean isVisible = mAnimatorView.getGlobalVisibleRect(globalVisibleRect);
+
+        if (!isVisible || globalVisibleRect.isEmpty()) {
+            return;
+        }
+
+        Rect cropRect = new Rect();
+        cropRect.left = globalVisibleRect.left - fullViewRect.left;
+        cropRect.top = globalVisibleRect.top - fullViewRect.top;
+        cropRect.right = cropRect.left + globalVisibleRect.width();
+        cropRect.bottom = cropRect.top + globalVisibleRect.height();
+
+        mBitmap = mContainer.createBitmapFromView(mAnimatorView, cropRect);
+        if (mBitmap == null) {
+            return;
+        }
+        mRect = mContainer.getViewRect(mAnimatorView);
+        setValueAnimator(); // Initialize helper values
+        calculateParticles(mBitmap);
+        
+        // Manual mode initialization
+        mManualProgress = 0f;
+        setProgress(0f);
+    }
+
+    /**
+     * 手动控制进度
+     * @param progress 0.0 ~ 1.0
+     */
+    public void setProgress(float progress) {
+        mManualProgress = progress;
+        
+        // 0进度时保持原图状态：View复位，不绘制粒子
+        if (progress <= 0.0f) {
+             mAnimatorView.setTranslationX(0);
+             mAnimatorView.setTranslationY(0);
+             mAnimatorView.setScaleX(1f);
+             mAnimatorView.setScaleY(1f);
+             mAnimatorView.setAlpha(1f);
+             mContainer.invalidate();
+             return;
+        }
+
+        long totalDuration = mStartDelay + mDuration;
+        long currentTime = (long) (progress * totalDuration);
+
+        // Handle View State (Simulate hideView)
+        // Shake phase: 0 -> StartDelay + 50
+        if (mEnableHideAnimation) {
+            if (currentTime < mStartDelay + 50) {
+                // Shake effect: random offset
+                // To avoid jitter when stationary, only update on change. 
+                // Since this is called on progress change, it's fine.
+                 Random random = ThreadLocalRandom.current();
+                 mAnimatorView.setTranslationX((random.nextFloat() - 0.5F) * mAnimatorView.getWidth() * 0.05F);
+                 mAnimatorView.setTranslationY((random.nextFloat() - 0.5f) * mAnimatorView.getHeight() * 0.05f);
+            } else {
+                mAnimatorView.setTranslationX(0);
+                mAnimatorView.setTranslationY(0);
+            }
+
+            // Shrink phase: StartDelay -> StartDelay + 260
+            if (currentTime >= mStartDelay) {
+                long shrinkTime = currentTime - mStartDelay;
+                if (shrinkTime < 260) {
+                    float shrinkProgress = shrinkTime / 260f;
+                    mAnimatorView.setScaleX(1f - shrinkProgress);
+                    mAnimatorView.setScaleY(1f - shrinkProgress);
+                    mAnimatorView.setAlpha(1f - shrinkProgress);
+                } else {
+                    mAnimatorView.setScaleX(0f);
+                    mAnimatorView.setScaleY(0f);
+                    mAnimatorView.setAlpha(0f);
+                }
+            } else {
+                mAnimatorView.setScaleX(1f);
+                mAnimatorView.setScaleY(1f);
+                mAnimatorView.setAlpha(1f);
+            }
+        } else {
+            // No hide animation
+             if (currentTime >= mStartDelay) {
+                 mAnimatorView.setAlpha(0f);
+             } else {
+                 mAnimatorView.setAlpha(1f);
+             }
+        }
+        
         mContainer.invalidate();
     }
 
@@ -505,10 +625,10 @@ public class SmashAnimator {
         
         if (mEnableHideAnimation) {
             // 启用抖动+缩放动画
-            ValueAnimator valueAnimator = new ValueAnimator();
-            valueAnimator.setDuration(startDelay + 50).setFloatValues(0f, 1f);
+            mShakeAnimator = new ValueAnimator();
+            mShakeAnimator.setDuration(startDelay + 50).setFloatValues(0f, 1f);
             // 使View颤抖 - 使用 ThreadLocalRandom 代替每次创建 Random
-            valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            mShakeAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 @Override
                 public void onAnimationUpdate(ValueAnimator valueAnimator) {
                     Random random = ThreadLocalRandom.current();
@@ -517,14 +637,14 @@ public class SmashAnimator {
                 }
             });
             // 抖动动画结束后重置translation，防止位置漂移
-            valueAnimator.addListener(new AnimatorListenerAdapter() {
+            mShakeAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     view.setTranslationX(0);
                     view.setTranslationY(0);
                 }
             });
-            valueAnimator.start();
+            mShakeAnimator.start();
             // 将View 缩放至0、透明至0
             view.animate().setDuration(260).setStartDelay(startDelay).scaleX(0).scaleY(0).alpha(0).start();
         } else {
@@ -541,8 +661,14 @@ public class SmashAnimator {
      */
     public boolean draw(Canvas canvas) {
         // 稳定性：空指针防护
-        if (!mValueAnimator.isStarted() || mParticles == null || mParticleCount <= 0) {
+        if ((!mValueAnimator.isStarted() && mManualProgress < 0) || mParticles == null || mParticleCount <= 0) {
             return false;
+        }
+        
+        // 手动模式且进度为0时，不绘制粒子（显示原View）
+        if (mManualProgress == 0f) {
+            mDirtyRect.setEmpty();
+            return true;
         }
 
         // 记录脏区范围
@@ -553,7 +679,19 @@ public class SmashAnimator {
         boolean hasVisibleParticle = false;
 
         // 优化：缓存 animatedValue，避免每个粒子都调用一次
-        float animatedValue = (float) mValueAnimator.getAnimatedValue();
+        float animatedValue = 0f;
+        if (mManualProgress >= 0) {
+            long totalDuration = mStartDelay + mDuration;
+            long currentTime = (long) (mManualProgress * totalDuration);
+            if (currentTime > mStartDelay) {
+               float particleProgress = (float)(currentTime - mStartDelay) / mDuration;
+               animatedValue = particleProgress * mEndValue;
+            } else {
+               animatedValue = 0f;
+            }
+        } else {
+            animatedValue = (float) mValueAnimator.getAnimatedValue();
+        }
 
         // 优化：一维数组遍历，减少循环开销和提升 cache 命中率
         for (int i = 0; i < mParticleCount; i++) {
